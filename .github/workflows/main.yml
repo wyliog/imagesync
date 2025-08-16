@@ -1,0 +1,17 @@
+- name: Install Skopeo
+  run: sudo apt-get install -y skopeo
+
+- name: Read images.txt and Sync with Skopeo
+  env:
+    REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
+    NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}
+    USERNAME: ${{ secrets.ALIYUN_USERNAME }}
+    PASSWORD: ${{ secrets.ALIYUN_PASSWORD }}
+  run: |
+    while IFS= read -r image; do
+      echo "Syncing image: $image"
+      skopeo copy \
+        docker://$image \
+        docker://${REGISTRY}/${NAMESPACE}/${image//\//_} \
+        --dest-creds=${USERNAME}:${PASSWORD}
+    done < images.txt
