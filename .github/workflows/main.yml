@@ -17,22 +17,18 @@ jobs:
         run: |
           # 安装依赖
           sudo apt-get update
-          sudo apt-get install -y wget
-
-          # 下载 Skopeo 二进制文件（推荐使用最新版本）
-          wget https://github.com/containers/skopeo/releases/download/v1.14.4/skopeo-linux-amd64
-          chmod +x skopeo-linux-amd64
-          sudo mv skopeo-linux-amd64 /usr/local/bin/skopeo
+          sudo apt-get install -y wget 
+          apt-get -y install skopeo
 
           # 验证安装
           skopeo --version
 
       - name: Sync Images
         env:
-          REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}  # 如 registry.cn-hangzhou.aliyuncs.com
-          NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}  # 如 my-namespace
-          USERNAME: ${{ secrets.ALIYUN_USERNAME }}
-          PASSWORD: ${{ secrets.ALIYUN_PASSWORD }}
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}  # 如 registry.cn-hangzhou.aliyuncs.com
+          NAMESPACE: ${{ secrets.NAMESPACE }}  # 如 my-namespace
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
         run: |
           # 逐行读取 images.txt
           while IFS= read -r image; do
