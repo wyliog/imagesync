@@ -18,7 +18,7 @@ jobs:
           # 安装依赖
           sudo apt-get update
           sudo apt-get install -y wget 
-          apt-get -y install skopeo
+          sudo apt-get -y install skopeo
 
           # 验证安装
           skopeo --version
