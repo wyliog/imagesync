@@ -1,17 +1,53 @@
-- name: Install Skopeo
-  run: sudo apt-get install -y skopeo
+name: Sync Images via Skopeo
 
-- name: Read images.txt and Sync with Skopeo
-  env:
-    REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
-    NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}
-    USERNAME: ${{ secrets.ALIYUN_USERNAME }}
-    PASSWORD: ${{ secrets.ALIYUN_PASSWORD }}
-  run: |
-    while IFS= read -r image; do
-      echo "Syncing image: $image"
-      skopeo copy \
-        docker://$image \
-        docker://${REGISTRY}/${NAMESPACE}/${image//\//_} \
-        --dest-creds=${USERNAME}:${PASSWORD}
-    done < images.txt
+on:
+  workflow_dispatch:  # 手动触发
+  push:
+    paths:
+      - "images.txt"  # 当 images.txt 文件变化时自动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Skopeo
+        run: |
+          # 安装依赖
+          sudo apt-get update
+          sudo apt-get install -y wget
+
+          # 下载 Skopeo 二进制文件（推荐使用最新版本）
+          wget https://github.com/containers/skopeo/releases/download/v1.14.4/skopeo-linux-amd64
+          chmod +x skopeo-linux-amd64
+          sudo mv skopeo-linux-amd64 /usr/local/bin/skopeo
+
+          # 验证安装
+          skopeo --version
+
+      - name: Sync Images
+        env:
+          REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}  # 如 registry.cn-hangzhou.aliyuncs.com
+          NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}  # 如 my-namespace
+          USERNAME: ${{ secrets.ALIYUN_USERNAME }}
+          PASSWORD: ${{ secrets.ALIYUN_PASSWORD }}
+        run: |
+          # 逐行读取 images.txt
+          while IFS= read -r image; do
+            echo "Syncing image: $image"
+
+            # 构建目标镜像地址
+            dest_image="${REGISTRY}/${NAMESPACE}/${image//\//_}"
+
+            # 使用 Skopeo 同步镜像
+            skopeo sync \
+              --src docker \
+              --dest docker \
+              --src-creds="${USERNAME}:${PASSWORD}" \
+              --dest-creds="${USERNAME}:${PASSWORD}" \
+              --insecure-policy \
+              docker://$image \
+              $dest_image
+          done < images.txt
