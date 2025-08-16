@@ -35,15 +35,16 @@ jobs:
             echo "Syncing image: $image"
 
             # 构建目标镜像地址
-            dest_image="${REGISTRY}/${NAMESPACE}/${image//\//_}"
+            dest_image="${REGISTRY}/${NAMESPACE}/"
 
             # 使用 Skopeo 同步镜像
             skopeo sync \
               --src docker \
               --dest docker \
-              --src-creds="${USERNAME}:${PASSWORD}" \
               --dest-creds="${USERNAME}:${PASSWORD}" \
               --insecure-policy \
-              docker://$image \
-              $dest_image
+              --src-tls-verify=false \
+              --dest-tls-verify=false \
+              ${image} \
+              ${dest_image}
           done < images.txt
