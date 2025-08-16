@@ -35,7 +35,8 @@ jobs:
             echo "Syncing image: $image"
 
             # 构建目标镜像地址
-            dest_image="${DOCKER_REGISTRY}/${NAMESPACE}/"
+            dest_image="${REGISTRY}/${NAMESPACE}/"
+            echo "DEST: $dest_image"
 
             # 使用 Skopeo 同步镜像
             skopeo sync \
