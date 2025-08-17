@@ -1,2 +1,4 @@
 quay.io/argoproj/argocd:v3.1.0
 registry.k8s.io/ingress-nginx/controller:v1.9.6
+kong/kubernetes-ingress-controller:3.5
+kong:3.9
