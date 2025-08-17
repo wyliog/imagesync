@@ -1,1 +1,2 @@
 quay.io/argoproj/argocd:v3.1.0
+registry.k8s.io/ingress-nginx/controller:v1.9.6
