@@ -1,8 +1,6 @@
-registry.k8s.io/kube-apiserver:v1.30.0
-registry.k8s.io/kube-controller-manager:v1.30.0
-registry.k8s.io/kube-scheduler:v1.30.0
-registry.k8s.io/kube-proxy:v1.30.0
-registry.k8s.io/pause:3.9
-registry.k8s.io/etcd:3.5.13-0
-docker.io/flannel/flannel:v0.25.5
-docker.io/flannel/flannel-cni-plugin:v1.5.1-flannel1
+openebs/lvm-driver:ci
+registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.8.0
+registry.k8s.io/sig-storage/csi-provisioner:v3.5.0
+registry.k8s.io/sig-storage/csi-resizer:v1.8.0
+registry.k8s.io/sig-storage/csi-snapshotter:v6.2.2
+registry.k8s.io/sig-storage/snapshot-controller:v6.2.2
