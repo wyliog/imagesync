@@ -34,7 +34,7 @@ jobs:
           REGION: ${{ secrets.REGION }}
         run: |
           # 下载工具
-          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh -o ./hcloud_install.sh && bash ./hcloud_install.sh -y
+          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh -o ./hcloud_install.sh && sudo bash ./hcloud_install.sh -y
           # 配置ak/sk
           sudo hcloud configure set  --cli-access-key=${AK} --cli-secret-key=${SK}  --cli-mode=AKSK
           # 逐行读取 images.txt
