@@ -57,7 +57,7 @@ jobs:
               ${dest_image}
             sleep 1
             #设置公开权限
-            image_no_domain="${image#*/}"
-            sudo hcloud SWR UpdateRepo --cli-region="${REGION}" --Content-Type="application/json" --namespace="${NAMESPACE}" --repository="${image_no_domain%%:*}" --is_public=true
+            image_no_domain="${image%:*}"
+            sudo hcloud SWR UpdateRepo --cli-region="${REGION}" --Content-Type="application/json" --namespace="${NAMESPACE}" --repository="${image_no_domain##*/}" --is_public=true
           done < images.txt
         
