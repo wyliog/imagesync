@@ -36,7 +36,7 @@ jobs:
           # 下载工具
           sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh -o ./hcloud_install.sh && sudo bash ./hcloud_install.sh -y
           # 配置ak/sk
-          sudo hcloud configure set  --cli-access-key=${AK} --cli-secret-key=${SK}  --cli-mode=AKSK
+          sudo hcloud configure set  --cli-access-key=${AK} --cli-secret-key=${SK}  --cli-mode=AKSK --cli-agree-privacy-statement=true
           # 逐行读取 images.txt
           while IFS= read -r image; do
             echo "Syncing image: $image"
