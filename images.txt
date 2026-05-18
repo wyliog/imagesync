@@ -1,3 +1,5 @@
 registry.k8s.io/kube-apiserver:v1.35.3
 redis:7-alpine
 postgres:15-alpine
+golang:1.26.1-alpine
+debian:bookworm-slim
