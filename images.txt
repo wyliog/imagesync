@@ -1,1 +1,2 @@
 debian:bookworm-slim
+calciumion/new-api:latest
