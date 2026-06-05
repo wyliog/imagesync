@@ -1,1 +1,2 @@
 calciumion/new-api:latest
+searxng/searxng:latest
