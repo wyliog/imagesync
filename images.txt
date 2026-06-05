@@ -1,2 +1,1 @@
-calciumion/new-api:latest
-searxng/searxng:latest
+docker.io/valkey/valkey:9-alpine
