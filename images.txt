@@ -1,3 +1,4 @@
+registry.cn-hangzhou.aliyuncs.com/acs/minecraft-demo:1.12.2 
 openkruise/kruise-manager:v1.8.0
 openkruise/kruise-helm-hook:v0.1.0
 openkruise/kruise-game-manager:v1.0.0
