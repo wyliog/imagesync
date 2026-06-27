@@ -14,11 +14,11 @@ FROM alpine:latest AS downloader
 
 RUN apk add --no-cache wget ca-certificates
 
-# Qwen2.5-VL-3B-Instruct GGUF Q4_K_M (~2GB)
+# Qwen2.5-VL-3B-Instruct GGUF Q2_K (~1.2GB)
 RUN mkdir -p /data && \
     wget -q --show-progress \
-        https://huggingface.co/unsloth/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf \
-        -O /data/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf && \
+        https://huggingface.co/unsloth/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q2_K.gguf \
+        -O /data/Qwen2.5-VL-3B-Instruct-Q2_K.gguf && \
     ls -lh /data/
 
 # ============================================================
