@@ -1,14 +1,35 @@
-name: Build & Push GGUF Docker Image
+name: Build & Sync
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '运行模式'
+        type: choice
+        default: 'auto'
+        options:
+          - auto       # 根据变更文件自动判断
+          - build      # 仅构建 GGUF 镜像
+          - sync       # 仅同步 images.txt 镜像
+          - all        # 两者都执行
   push:
     paths:
-      - "Dockerfile"   # Dockerfile 变化时自动触发
-      - "images.txt"   # 也可手动改 images.txt 触发
+      - "Dockerfile"    # Dockerfile 变更 → 构建 GGUF 镜像
+      - "images.txt"    # images.txt 变更 → 同步镜像
 
 jobs:
-  build-and-push:
+  # ============================================================
+  # job 1 — 构建 GGUF Docker 镜像并推送
+  # ============================================================
+  build-gguf:
+    name: Build GGUF Image
+    # 条件: 手动选了 build/all/auto, 或 push 触发了 Dockerfile
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.mode == 'auto' ||
+       github.event.inputs.mode == 'build' ||
+       github.event.inputs.mode == 'all')
+      || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -47,7 +68,7 @@ jobs:
           docker push "${dest}"
           echo "Push complete"
 
-      - name: Set Repository Public
+      - name: Set Repository Public (GGUF)
         env:
           AK: ${{ secrets.AK }}
           SK: ${{ secrets.SK }}
@@ -69,3 +90,74 @@ jobs:
             --repository="qwen2.5-vl-3b-instruct-gguf" \
             --is_public=true
           echo "Repository set to public"
+
+  # ============================================================
+  # job 2 — 从 images.txt 同步镜像（原有逻辑）
+  # ============================================================
+  sync-images:
+    name: Sync Images via Skopeo
+    needs: []
+    # 条件: 手动选了 sync/all/auto, 或 push 触发了 images.txt
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.mode == 'auto' ||
+       github.event.inputs.mode == 'sync' ||
+       github.event.inputs.mode == 'all')
+      || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget curl
+          sudo apt-get -y install skopeo
+          skopeo --version
+
+      - name: Sync Images
+        env:
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          AK: ${{ secrets.AK }}
+          SK: ${{ secrets.SK }}
+          REGION: ${{ secrets.REGION }}
+        run: |
+          # 安装 hcloud CLI
+          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh \
+            -o /tmp/hcloud_install.sh && sudo bash /tmp/hcloud_install.sh -y
+          # 配置 AK/SK
+          sudo hcloud configure set \
+            --cli-access-key="${AK}" \
+            --cli-secret-key="${SK}" \
+            --cli-mode=AKSK \
+            --cli-agree-privacy-statement=true
+          # 逐行读取 images.txt 并同步
+          while IFS= read -r image; do
+            [[ -z "$image" ]] && continue
+            echo "=========================================="
+            echo "Syncing image: $image"
+            dest_image="${REGISTRY}/${NAMESPACE}/"
+            echo "DEST: $dest_image"
+            skopeo sync \
+              --src docker \
+              --dest docker \
+              --dest-creds="${USERNAME}:${PASSWORD}" \
+              --insecure-policy \
+              --src-tls-verify=false \
+              --dest-tls-verify=false \
+              "${image}" \
+              "${dest_image}"
+            sleep 1
+            # 设置公开权限
+            image_no_domain="${image%:*}"
+            sudo hcloud SWR UpdateRepo \
+              --cli-region="${REGION}" \
+              --Content-Type="application/json" \
+              --namespace="${NAMESPACE}" \
+              --repository="${image_no_domain##*/}" \
+              --is_public=true
+          done < images.txt
