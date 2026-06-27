@@ -1,63 +1,71 @@
-name: Sync Images via Skopeo
+name: Build & Push GGUF Docker Image
 
 on:
   workflow_dispatch:  # 手动触发
   push:
     paths:
-      - "images.txt"  # 当 images.txt 文件变化时自动触发
+      - "Dockerfile"   # Dockerfile 变化时自动触发
+      - "images.txt"   # 也可手动改 images.txt 触发
 
 jobs:
-  sync:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Skopeo
-        run: |
-          # 安装依赖
-          sudo apt-get update
-          sudo apt-get install -y wget  curl
-          sudo apt-get -y install skopeo
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          # 验证安装
-          skopeo --version
-
-      - name: Sync Images
+      - name: Build Docker Image
         env:
-          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}  # 如 registry.cn-hangzhou.aliyuncs.com
-          NAMESPACE: ${{ secrets.NAMESPACE }}  # 如 my-namespace
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+        run: |
+          IMAGE_TAG="qwen2.5-vl-3b-instruct-gguf:latest"
+          echo "Building image: ${IMAGE_TAG}"
+          docker build \
+            --progress=plain \
+            -t "${IMAGE_TAG}" \
+            -f Dockerfile \
+            .
+          echo "Build complete. Image size:"
+          docker images --format "{{.Repository}}:{{.Tag}}  {{.Size}}" | grep "${IMAGE_TAG%%:*}"
+
+      - name: Push to Registry
+        env:
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          IMAGE_TAG="qwen2.5-vl-3b-instruct-gguf:latest"
+          dest="${REGISTRY}/${NAMESPACE}/${IMAGE_TAG}"
+          echo "Pushing to: ${dest}"
+          echo "$PASSWORD" | docker login "${REGISTRY}" -u "${USERNAME}" --password-stdin
+          docker tag "${IMAGE_TAG}" "${dest}"
+          docker push "${dest}"
+          echo "Push complete"
+
+      - name: Set Repository Public
+        env:
           AK: ${{ secrets.AK }}
           SK: ${{ secrets.SK }}
           REGION: ${{ secrets.REGION }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
         run: |
-          # 下载工具
-          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh -o ./hcloud_install.sh && sudo bash ./hcloud_install.sh -y
-          # 配置ak/sk
-          sudo hcloud configure set  --cli-access-key=${AK} --cli-secret-key=${SK}  --cli-mode=AKSK --cli-agree-privacy-statement=true
-          # 逐行读取 images.txt
-          while IFS= read -r image; do
-            echo "Syncing image: $image"
-
-            # 构建目标镜像地址
-            dest_image="${REGISTRY}/${NAMESPACE}/"
-            echo "DEST: $dest_image"
-
-            # 使用 Skopeo 同步镜像
-            skopeo sync \
-              --src docker \
-              --dest docker \
-              --dest-creds="${USERNAME}:${PASSWORD}" \
-              --insecure-policy \
-              --src-tls-verify=false \
-              --dest-tls-verify=false \
-              ${image} \
-              ${dest_image}
-            sleep 1
-            #设置公开权限
-            image_no_domain="${image%:*}"
-            sudo hcloud SWR UpdateRepo --cli-region="${REGION}" --Content-Type="application/json" --namespace="${NAMESPACE}" --repository="${image_no_domain##*/}" --is_public=true
-          done < images.txt
-        
+          echo "Setting repository public..."
+          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh \
+            -o /tmp/hcloud_install.sh && sudo bash /tmp/hcloud_install.sh -y
+          sudo hcloud configure set \
+            --cli-access-key="${AK}" \
+            --cli-secret-key="${SK}" \
+            --cli-mode=AKSK \
+            --cli-agree-privacy-statement=true
+          sudo hcloud SWR UpdateRepo \
+            --cli-region="${REGION}" \
+            --Content-Type="application/json" \
+            --namespace="${NAMESPACE}" \
+            --repository="qwen2.5-vl-3b-instruct-gguf" \
+            --is_public=true
+          echo "Repository set to public"

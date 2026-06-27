@@ -1,0 +1,63 @@
+name: Sync Images via Skopeo
+
+on:
+  workflow_dispatch:  # 手动触发
+  push:
+    paths:
+      - "images.txt"  # 当 images.txt 文件变化时自动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Skopeo
+        run: |
+          # 安装依赖
+          sudo apt-get update
+          sudo apt-get install -y wget  curl
+          sudo apt-get -y install skopeo
+
+          # 验证安装
+          skopeo --version
+
+      - name: Sync Images
+        env:
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}  # 如 registry.cn-hangzhou.aliyuncs.com
+          NAMESPACE: ${{ secrets.NAMESPACE }}  # 如 my-namespace
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          AK: ${{ secrets.AK }}
+          SK: ${{ secrets.SK }}
+          REGION: ${{ secrets.REGION }}
+        run: |
+          # 下载工具
+          sudo curl -sSL https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh -o ./hcloud_install.sh && sudo bash ./hcloud_install.sh -y
+          # 配置ak/sk
+          sudo hcloud configure set  --cli-access-key=${AK} --cli-secret-key=${SK}  --cli-mode=AKSK --cli-agree-privacy-statement=true
+          # 逐行读取 images.txt
+          while IFS= read -r image; do
+            echo "Syncing image: $image"
+
+            # 构建目标镜像地址
+            dest_image="${REGISTRY}/${NAMESPACE}/"
+            echo "DEST: $dest_image"
+
+            # 使用 Skopeo 同步镜像
+            skopeo sync \
+              --src docker \
+              --dest docker \
+              --dest-creds="${USERNAME}:${PASSWORD}" \
+              --insecure-policy \
+              --src-tls-verify=false \
+              --dest-tls-verify=false \
+              ${image} \
+              ${dest_image}
+            sleep 1
+            #设置公开权限
+            image_no_domain="${image%:*}"
+            sudo hcloud SWR UpdateRepo --cli-region="${REGION}" --Content-Type="application/json" --namespace="${NAMESPACE}" --repository="${image_no_domain##*/}" --is_public=true
+          done < images.txt
+        
